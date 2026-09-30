@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sarp'ın Hazine Haritası</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f4e4bc; /* Eski harita kağıdı rengi */
+            background-image: radial-gradient(#d4c391 1px, transparent 1px);
+            background-size: 20px 20px;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            color: #4e342e;
+        }
+        h1 { color: #bf360c; font-size: 2.1em; text-shadow: 2px 2px #ffcc80; margin-bottom: 30px;}
+        
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* Harita Parçaları (Günler) */
+        .day-card {
+            width: 80px;
+            height: 100px;
+            background: #ffe082;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #5d4037;
+            border: 3px dashed #8d6e63;
+            position: relative;
+            box-shadow: 0 6px 0 #8d6e63;
+            transition: transform 0.1s;
+        }
+        
+        .day-card:active { transform: translateY(6px); box-shadow: none; }
+        
+        .badge {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            font-size: 32px;
+            display: none;
+        }
+        
+        /* Tamamlanmış Gün (Hazine Bulundu) */
+        .completed {
+            background: #aed581;
+            border-color: #558b2f;
+            border-style: solid;
+            color: #1b5e20;
+            box-shadow: 0 6px 0 #558b2f;
+        }
+        .completed .badge { display: block; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5)); }
+        
+        /* Modal & Sandık Animasyonları */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .envelope-wrapper {
+            position: relative;
+            width: 95%;
+            max-width: 400px;
+            perspective: 1000px;
+        }
+
+        /* Hazine Sandığı */
+        .treasure-chest {
+            background: linear-gradient(to bottom, #795548, #5d4037);
+            height: 220px;
+            border-radius: 15px 15px 5px 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            cursor: pointer;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.7), inset 0 10px 0 rgba(255,255,255,0.1);
+            animation: dropDown 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            position: relative;
+            border: 5px solid #3e2723;
+        }
+
+        /* Sandık Altın Şeritleri */
+        .treasure-chest::before, .treasure-chest::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 100%;
+            background: #ffb300;
+            border-left: 2px solid #ff8f00;
+            border-right: 2px solid #ff8f00;
+        }
+        .treasure-chest::before { left: 40px; }
+        .treasure-chest::after { right: 40px; }
+
+        .lock {
+            width: 60px;
+            height: 70px;
+            background: #ffca28;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 35px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            z-index: 2;
+            border: 3px solid #ff8f00;
+            animation: pulse 1.5s infinite;
+        }
+
+        .click-text {
+            z-index: 2;
+            color: #ffca28;
+            margin-top: 25px;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px black;
+            font-weight: 900;
+        }
+
+        /* Açılan Parşömen */
+        .parchment {
+            background: #fff8e1;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+            display: none;
+            color: #4e342e;
+            text-align: left;
+            animation: unfold 0.5s ease-out;
+            border: 2px solid #d7ccc8;
+        }
+        
+        @keyframes dropDown {
+            0% { transform: translateY(-200px) scale(0.8) rotateX(-20deg); opacity: 0; }
+            100% { transform: translateY(0) scale(1) rotateX(0deg); opacity: 1; }
+        }
+        @keyframes unfold {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .letter-header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px dashed #bcaaa4;
+            padding-bottom: 10px;
+        }
+
+        /* Görev Kartları */
+        .task-card {
+            background: #ffffff;
+            border: 3px solid #d7ccc8;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            font-size: 17px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .task-card.gidis { border-left: 8px solid #00acc1; } /* Deniz Mavi */
+        .task-card.donus { border-left: 8px solid #43a047; } /* Dinozor Yeşili */
+
+        .task-card.done {
+            background: #c8e6c9;
+            border-color: #4caf50;
+            color: #1b5e20;
+        }
+
+        .task-click-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            cursor: pointer;
+        }
+
+        .emoji-icon {
+            font-size: 35px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        /* Yeni Sesli Oku Butonu */
+        .read-btn {
+            background: #00acc1;
+            color: white;
+            border: none;
+            width: 55px;
+            height: 100%;
+            min-height: 80px;
+            font-size: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .read-btn:hover { background: #00838f; }
+        .read-btn:active { background: #006064; }
+        .task-card.donus .read-btn { background: #43a047; }
+        .task-card.donus .read-btn:hover { background: #2e7d32; }
+
+        .close-btn {
+            width: 100%; padding: 15px; font-size: 20px; font-weight: bold;
+            background: #d84315; color: white; border: none; border-radius: 10px;
+            cursor: pointer; box-shadow: 0 4px 0 #bf360c; margin-top: 5px;
+        }
+        .close-btn:active { transform: translateY(4px); box-shadow: none; }
+
+    </style>
+</head>
+<body>
+
+    <h1>🏴‍☠️ Dinozor Adasına Yolculuk 🦖</h1>
+    <div class="grid" id="grid"></div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="envelope-wrapper">
+            
+            <!-- Hazine Sandığı -->
+            <div class="treasure-chest" id="closed-envelope" onclick="openEnvelope()">
+                <div class="lock">🗝️</div>
+                <div class="click-text">Kilide Dokun ve Aç!</div>
+            </div>
+
+            <!-- Parşömen Mektup -->
+            <div class="parchment" id="opened-letter">
+                <div class="letter-header">
+                    <h2 style="margin:0; color:#bf360c;" id="modal-title">Gün 1 Hazine Haritası</h2>
+                </div>
+                
+                <div class="task-card gidis" id="card-gidis">
+                    <div class="task-click-area" onclick="toggleTask('gidis')">
+                        <div class="emoji-icon" id="emoji-gidis">🔭</div>
+                        <div id="text-gidis">Görev yükleniyor...</div>
+                    </div>
+                    <button class="read-btn" onclick="readTaskAloud('gidis')">🔊</button>
+                </div>
+                
+                <div class="task-card donus" id="card-donus">
+                    <div class="task-click-area" onclick="toggleTask('donus')">
+                        <div class="emoji-icon" id="emoji-donus">🦖</div>
+                        <div id="text-donus">Görev yükleniyor...</div>
+                    </div>
+                    <button class="read-btn" onclick="readTaskAloud('donus')">🔊</button>
+                </div>
+                
+                <button class="close-btn" onclick="closeModal()">Haritayı Katla & Çık</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Korsan, Dinozor ve Hazine Temalı 15 Günlük (5'er dakikalık) Görev Listesi
+        const gorevler = [
+            { gun: 1, 
+              gidisEmoji: "🔭", gidis: "Kaptan, ellerinle bir dürbün yap! Okula gidene kadar sadece dürbününden bakarak yürü ve yolda gördüğün 3 farklı kırmızı nesneyi söyle.", 
+              donusEmoji: "🦖", donus: "Kocaman bir T-Rex uyandı! Ellerini T-Rex gibi küçük yapıp göğsüne daya. Eve kadar kocaman adımlar atarak ve kükreyerek yürü." },
+            { gun: 2, 
+              gidisEmoji: "🏴‍☠️", gidis: "Bugün kaldırım çizgileri deniz! Çizgilere basarsan denize düşersin. Sadece taşların ortasına basarak dengede yürü ve Wellerman şarkısını mırıldan.", 
+              donusEmoji: "🦎", donus: "Velociraptor gibi sinsi bir avcı ol! Ayak sesini hiç çıkarmadan, parmak ucunda yürüyerek eve git. Kapıdan girince köpeği sessizce şaşırt!" },
+            { gun: 3, 
+              gidisEmoji: "🦜", gidis: "Omzunda görünmez bir korsan papağanı var. Okula varana kadar babanın söylediği her kelimeyi papağan gibi tekrarla!", 
+              donusEmoji: "🦕", donus: "Sen şimdi uzun boyunlu bir Brachiosaurus'sun! Kollarını yukarı uzat. Yoldaki ağaçların yapraklarını yiyormuş gibi yaparak eve kadar yürü." },
+            { gun: 4, 
+              gidisEmoji: "⚓", gidis: "Gemi demir attı, ayaklarımız çok ağır! Dizlerini bükmeden, bacaklarını dümdüz robot gibi atarak okula kadar yürü.", 
+              donusEmoji: "🌋", donus: "Dinozor adasında yanardağ patladı, yerler lav! Sadece gölgelere basarak eve gitmeye çalış. Güneşe basarsan yanarsın!" },
+            { gun: 5, 
+              gidisEmoji: "🗺️", gidis: "Hazine haritası rüzgarda uçuyor! Yürürken 10 adımda bir olduğun yerde etrafında dönerek hayali haritayı havadan yakalamaya çalış.", 
+              donusEmoji: "🦴", donus: "Dinozor fosili avı! Yolda gördüğün en ilginç veya beyaz renkli taşı bul. Onu eve getirip erik ağacının dibine hazine gibi sakla." },
+            { gun: 6, 
+              gidisEmoji: "🪵", gidis: "Korsan gemisindesin ve tahta bacaklısın. Yolda her 15 adımda bir dur, sağ bacağını kaldırıp sadece sol bacağınla 3 kere zıpla.", 
+              donusEmoji: "🐾", donus: "Triceratops yürüyüşü! Ellerini başının iki yanına boynuz gibi koy. Eve kadar sağa ve sola hafifçe kafa atarak yürü." },
+            { gun: 7, 
+              gidisEmoji: "🪙", gidis: "Korsan altınlarını sayıyoruz! Okula gidene kadar attığın her adımı sesli say. 20'ye gelince dur, alkışla ve baştan başla.", 
+              donusEmoji: "🦅", donus: "Uçan dinozor Pterodactyl ol! Kollarını dev kanatlar gibi aç ve eve kadar aşağı yukarı sallayarak uçuyormuş gibi yürü." },
+            { gun: 8, 
+              gidisEmoji: "🌊", gidis: "Gemi çok sallanıyor! Kollarını iki yana aç. Okula gidene kadar bir sağa bir sola yatarak dalgalarda yürüyormuş gibi git.", 
+              donusEmoji: "🥚", donus: "Elinde çok değerli bir dinozor yumurtası var! Yumurtayı düşürmemek için iki elini önde birleştir ve eve kadar çok minik adımlarla dikkatlice yürü." },
+            { gun: 9, 
+              gidisEmoji: "⚔️", gidis: "Yolda korsan kılıç kalkan oyunu! Baban 'KILIÇ' derse zıpla, 'KALKAN' derse çömel. Okula kadar yürürken bu komutlara hazır ol.", 
+              donusEmoji: "🌳", donus: "Ormanda dev bir dinozor saklanıyor! Eve yaklaşınca bahçedeki erik ağacına sımsıkı sarıl ki dinozor seni bulamasın." },
+            { gun: 10, 
+              gidisEmoji: "❌", gidis: "Hazine haritasında X işaretini takip et! Yolda birbirini kesen (çizgilerin kesiştiği artı şeklinde) taşları veya fayansları bulup üzerlerine basarak ilerle.", 
+              donusEmoji: "🐊", donus: "Suda dev bir Mosasaurus var! Yürürken baban 'TİMSAH' diye bağırırsa hemen 3 saniye heykel gibi donup hareketsiz kal." },
+            { gun: 11, 
+              gidisEmoji: "⚓", gidis: "Korsan mürettebatı, yan yana dizil! Babanla omuz omuza verin. Okula kadar birbirinize yapışık şekilde, yan yan yengeç gibi yürüyün.", 
+              donusEmoji: "🦖", donus: "Minik dinozor yuvaya dönüyor. Eve yaklaşırken çaktırmadan yerlerde sürünerek veya eğilerek İmren annene ve ikizlere ce-e yap!" },
+            { gun: 12, 
+              gidisEmoji: "🏴‍☠️", gidis: "Sen bir korsan kaptanısın! Okula giderken babana emirler ver (Örn: 'İki adım geri git, kollarını kaldır'). Emirlere uyarak yürüyeceksiniz.", 
+              donusEmoji: "🦕", donus: "Kocaman adımlar yarışması! Evin kapısına kadar kim en az adımda ulaşacak? Dinazor gibi dev adımlar atarak say." },
+            { gun: 13, 
+              gidisEmoji: "💰", gidis: "Altınları taşıyoruz, sırtımız çok ağır. İki büklüm, sırtında görünmez ağır bir çuval varmış gibi oflaya puflaya okula kadar yürü.", 
+              donusEmoji: "🦔", donus: "Dikenli dinozor Ankylosaurus ol! Yürürken sırtını babana veya duvarlara hafifçe sürt, kuyruğunla etrafa görünmez vuruşlar yap." },
+            { gun: 14, 
+              gidisEmoji: "🧭", gidis: "Pusulamız bozuldu! 10 adım dümdüz git, sonra arkanı dönüp 3 adım geri git. Okula kadar hep 10 ileri, 3 geri yaparak ilerle.", 
+              donusEmoji: "🦴", donus: "Köpeğimiz için gizli hazine (kemik) arıyoruz! Yoldaki taşların altlarına baka baka, gizemli bir kâşif gibi eve dön." },
+            { gun: 15, 
+              gidisEmoji: "👑", gidis: "Büyük gün! Korsan kralı olarak yürüyorsun. Dik dur, göğsünü kabart ve okula varana kadar herkesi bir kral gibi selamla.", 
+              donusEmoji: "🏆", donus: "BÜYÜK HAZİNE BULUNDU! Koşarak eve gir, hazine sandığı olan annene ve ikizlere sımsıkı sarıl. Dinozor avı başarıyla bitti!" }
+        ];
+
+        let currentDay = null;
+        let sarpProgress = JSON.parse(localStorage.getItem('sarpKorsanProgress')) || {};
+        const grid = document.getElementById('grid');
+
+        function renderGrid() {
+            grid.innerHTML = '';
+            gorevler.forEach(gorev => {
+                const isCompleted = sarpProgress[gorev.gun]?.gidis && sarpProgress[gorev.gun]?.donus;
+                
+                const card = document.createElement('div');
+                card.className = `day-card ${isCompleted ? 'completed' : ''}`;
+                card.onclick = () => showEnvelope(gorev.gun);
+                
+                card.innerHTML = `GÜN<br><b>${gorev.gun}</b><div class="badge">🪙</div>`; // Altın madeni para
+                grid.appendChild(card);
+            });
+        }
+
+        function showEnvelope(gun) {
+            currentDay = gun;
+            document.getElementById('modal').style.display = 'flex';
+            document.getElementById('closed-envelope').style.display = 'flex';
+            document.getElementById('opened-letter').style.display = 'none';
+        }
+
+        function openEnvelope() {
+            const gorev = gorevler.find(g => g.gun === currentDay);
+            
+            document.getElementById('modal-title').innerText = `Gün ${currentDay} Haritası`;
+            document.getElementById('emoji-gidis').innerText = gorev.gidisEmoji;
+            document.getElementById('text-gidis').innerText = gorev.gidis;
+            document.getElementById('emoji-donus').innerText = gorev.donusEmoji;
+            document.getElementById('text-donus').innerText = gorev.donus;
+
+            const gidisDurum = sarpProgress[currentDay]?.gidis || false;
+            const donusDurum = sarpProgress[currentDay]?.donus || false;
+            
+            document.getElementById('card-gidis').className = `task-card gidis ${gidisDurum ? 'done' : ''}`;
+            document.getElementById('card-donus').className = `task-card donus ${donusDurum ? 'done' : ''}`;
+
+            document.getElementById('closed-envelope').style.display = 'none';
+            document.getElementById('opened-letter').style.display = 'block';
+        }
+
+        function toggleTask(type) {
+            if(!sarpProgress[currentDay]) sarpProgress[currentDay] = {};
+            sarpProgress[currentDay][type] = !sarpProgress[currentDay][type];
+            
+            const card = document.getElementById(`card-${type}`);
+            if(sarpProgress[currentDay][type]) {
+                card.classList.add('done');
+                speak("Görev tamam! Altınlar senin Kaptan.");
+            } else {
+                card.classList.remove('done');
+            }
+            
+            localStorage.setItem('sarpKorsanProgress', JSON.stringify(sarpProgress));
+            renderGrid();
+        }
+
+        function readTaskAloud(type) {
+            const gorev = gorevler.find(g => g.gun === currentDay);
+            let metin = "";
+            
+            if (type === 'gidis') {
+                metin = `Günaydın Kaptan Sarp! Hazinye giden yolda bugünkü ilk görevin: ${gorev.gidis}`;
+            } else if (type === 'donus') {
+                metin = `Hey Dinozor Avcısı Sarp! Üsse dönüş görevin başlıyor: ${gorev.donus}`;
+            }
+            
+            speak(metin);
+        }
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); 
+                const msg = new SpeechSynthesisUtterance();
+                msg.text = text;
+                msg.lang = 'tr-TR';
+                msg.rate = 0.95;
+                window.speechSynthesis.speak(msg);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            window.speechSynthesis.cancel(); 
+        }
+
+        renderGrid();
+    </script>
+</body>
+</html>
